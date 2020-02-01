@@ -128,12 +128,20 @@ class AIPlayer(Player):
         pass
 
     def heuristicStepsToGoal(currentState):
-        
+        #for each move in currentState.getMove() -- return all possible moves from current state
+            #move.stepsToFoodGoal(currentstate)
+            #move.stepstoQueenGoal(currentstate)
+            #move.stepstoAntHillGoal(currentstate)
         
 		
         #returns a heuristic guess of how many moves it will take the agent to win the game starting from the given state
 	
 	def stepsToFoodGoal(currentState):
+        #for each ant in myworkers
+            #calculate steps required for +1 food (subroutine to figure out how far
+            # ant is from food/tunnel and if they are carrying food)
+
+#This is extra 
 	
 	def stepsToQueenGoal(currentState):
 	
