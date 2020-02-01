@@ -135,12 +135,13 @@ class AIPlayer(Player):
 	#divide steps to goal into steps to each type of win
 	def stepsToFoodGoal(currentState):
 	
-		numWorkers
+		#numWorkers
 		
-		foodScore
+		#foodScore
 		
-		avgStepsToFoodPoint
-	
+		#avgStepsToFoodPoint
+
+	#added comment
 	
 	def stepsToFoodPoint(currentState, workerAnt):
 		
