@@ -153,7 +153,7 @@ def stepsToQueenGoal(currentState):
 def stepsToAntHillGoal(currentState):
 	pass
 	
-def getBestMove(currentState):
+def getMove(currentState):
 	moves = listAllLegalMoves(currentState)
 	
 	moveNodes = []
@@ -200,7 +200,7 @@ print("Test code is being run")
 testState = GameState.getBasicState()
 		
 #getMove() test
-move = getBestMove(testState)
+move = getMove(testState)
 if (move == None):
 	print("Error in getMove(). Null move returned.\n")
 		
