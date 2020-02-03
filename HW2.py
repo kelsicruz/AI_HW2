@@ -20,8 +20,6 @@ from AIPlayerUtils import *
 #	playerId - The id of the player.
 ##
 class AIPlayer(Player):
-
-
 	def __init__(self, inputPlayerId):
 		super(AIPlayer, self).__init__(inputPlayerId, "HW2")
 		self.resetPlayerData()
@@ -135,22 +133,39 @@ class AIPlayer(Player):
 def heuristicStepsToGoal(currentState):
 	#test value
 	return 999999
-	
-	
-	#returns a heuristic guess of how many moves it will take the agent to win the game starting from the given state
-#divide steps to goal into steps to each type of win
+        
+		
+        #returns a heuristic guess of how many moves it will take the agent to win the game starting from the given state
+	#divide steps to goal into steps to each type of win
 def stepsToFoodGoal(currentState):
-	pass
-	#numWorkers
-	
+    #get the board
+    # fastClone(currentState)
+		
+    #get numWorkers
+	workerList = getAntList(currentState, me, (WORKER,))
+    numWorkers = len(workerList)
+
 	#foodScore
+    myInv = getCurrPlayerInventory(currentState)
+    numFood = myInv.foodCount
+    foodLoc = self.myFood.coords
+    anthillLoc = myInv.getAnthill().coords
+		
+    toFood = 0
+    toHill = 0
 	
-	#avgStepsToFoodPoint
-
-#added comment
-
-def stepsToFoodPoint(currentState, workerAnt):
-	pass
+    #avgStepsToFoodPoint
+    for ant in workerList:
+        toFood += stepsToFoodPoint(currentState, ant, foodLoc)
+        toHill += stepsToReach(currentState, foodLoc, anthillLoc)
+        cycle = toFood + toHill
+        # save in external variable? like ant1, ant2, etc?
+        
+        
+	
+def stepsToFoodPoint(currentState, workerAnt, foodLocation):
+	steps = stepsToReach(currentState, workerAnt.coords, foodLocation)
+    return steps
 
 def stepsToQueenGoal(currentState):
 	pass
