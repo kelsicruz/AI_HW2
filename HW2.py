@@ -134,6 +134,9 @@ class AIPlayer(Player):
         pass
 
 def heuristicStepsToGoal(currentState):
+    #return getMove(currentState)
+    
+    
     #test value
     return 999999
         
@@ -141,6 +144,8 @@ def heuristicStepsToGoal(currentState):
         #returns a heuristic guess of how many moves it will take the agent to
         #win the game starting from the given state
     #divide steps to goal into steps to each type of win
+### Should return 
+
 def stepsToFoodGoal(currentState):
     #get the board
     # fastClone(currentState)
@@ -160,7 +165,7 @@ def stepsToFoodGoal(currentState):
     #avgStepsToFoodPoint
     for ant in workerList:
         temp = stepsToFoodPoint(currentState, ant, bestFood)
-        if temp < leastSteps
+        if (temp < leastSteps):
             leastSteps = temp
             bestAnt = ant
         
