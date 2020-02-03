@@ -9,7 +9,8 @@ from Move import Move
 from GameState import *
 from AIPlayerUtils import *
 
-
+#global vars
+bestFood = None
 ##
 #AIPlayer
 #Description: The responsbility of this class is to interact with the game by
@@ -26,7 +27,6 @@ class AIPlayer(Player):
         self.resetPlayerData()
         
     def resetPlayerData(self):
-        self.bestFood = None
         self.myTunnel = None
         self.myHill = None
         self.avgDistToFoodPoint = None
@@ -79,27 +79,8 @@ class AIPlayer(Player):
         if (self.myHill == None):
             self.myHill = getConstrList(currentState, me, (ANTHILL,))[0].coords
         
-        if (self.bestFood == None):
-            foods = getConstrList(currentState, None, (FOOD,))
-            bestTunnelDist = 50
-            bestHillDist = 50
-            bestTunnelFood = None
-            bestHillFood = None
-            
-            for food in foods:
-                dist = stepsToReach(currentState, self.myTunnel, food.coords)
-                if (dist < bestTunnelDist) :
-                    bestTunnelFood = food
-                    bestTunnelDist = dist
-                dist = stepsToReach(currentState, self.myHill, food.coords)
-                if (dist < bestHillDist) :
-                    bestHillFood = food
-                    bestHillDist = dist
-            
-            if (bestHillDist < bestTunnelDist):
-                self.bestFood = (bestHillFood, self.myHill)
-            else :
-                self.bestFood = (bestTunnelFood, self.myTunnel)
+        if (bestFood == None):
+            assignBestFood(currentState, self.myTunnel, self.myHill)
         #if (self.avgDistToFoodPoint == None and self.bestFood != None):
         #	for worker in workerAnts:
         #		print("this loop ran once!\n")
@@ -203,7 +184,29 @@ def bestMove(moveNodes):
             bestNodeUtility = moveNode.utility
     
     return bestNode
+
+def assignBestFood(currentState, myTunnel, myHill):
+    
+    foods = getConstrList(currentState, None, (FOOD,))
+    bestTunnelDist = 50
+    bestHillDist = 50
+    bestTunnelFood = None
+    bestHillFood = None
             
+    for food in foods:
+        dist = stepsToReach(currentState, myTunnel, food.coords)
+        if (dist < bestTunnelDist) :
+            bestTunnelFood = food
+            bestTunnelDist = dist
+        dist = stepsToReach(currentState, myHill, food.coords)
+        if (dist < bestHillDist) :
+            bestHillFood = food
+            bestHillDist = dist
+            
+    if (bestHillDist < bestTunnelDist):
+        bestFood = (bestHillFood, myHill)
+    else :
+        bestFood = (bestTunnelFood, myTunnel)
 
 class MoveNode():
     
