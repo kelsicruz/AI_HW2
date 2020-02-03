@@ -11,6 +11,7 @@ from AIPlayerUtils import *
 
 #global vars
 bestFood = None
+avgDistToFoodPoint = None
 ##
 #AIPlayer
 #Description: The responsbility of this class is to interact with the game by
@@ -29,7 +30,6 @@ class AIPlayer(Player):
     def resetPlayerData(self):
         self.myTunnel = None
         self.myHill = None
-        self.avgDistToFoodPoint = None
 
     def getPlacement(self, currentState):
     
@@ -60,7 +60,8 @@ class AIPlayer(Player):
     #Description: Gets the next move from the Player.
     #
     #Parameters:
-    #	currentState - The state of the current game waiting for the player's move
+    #	currentState - The state of the current game waiting for the player's
+    #	move
     #	(GameState)
     #
     #Return: The Move to be made
@@ -68,6 +69,9 @@ class AIPlayer(Player):
     def getMove(self, currentState):
         me = currentState.whoseTurn
         workerAnts = getAntList(currentState, me, (WORKER,))
+        global bestFood
+        global avgDistToFoodPoint
+
         if (me == PLAYER_ONE):
             enemy = PLAYER_TWO
         else :
@@ -79,8 +83,11 @@ class AIPlayer(Player):
         if (self.myHill == None):
             self.myHill = getConstrList(currentState, me, (ANTHILL,))[0].coords
         
-        if (bestFood == None):
-            assignBestFood(currentState, self.myTunnel, self.myHill)
+        if (bestFood == None and avgDistToFoodPoint == None):
+            assignGlobalVars(currentState, self.myTunnel, self.myHill)
+        
+            
+
         #if (self.avgDistToFoodPoint == None and self.bestFood != None):
         #	for worker in workerAnts:
         #		print("this loop ran once!\n")
@@ -118,7 +125,11 @@ class AIPlayer(Player):
 
 def heuristicStepsToGoal(currentState):
     #test value
-    return 999999
+    stepsToGoal = stepsToFoodGoal(currentState)
+    print("total steps to goal: ")
+    print(stepsToGoal)
+    print("\n")
+    return stepsToGoal
         
         
         #returns a heuristic guess of how many moves it will take the agent to
@@ -129,28 +140,38 @@ def stepsToFoodGoal(currentState):
     # fastClone(currentState)
         
     #get numWorkers
-    workerList = getAntList(currentState, me, (WORKER,))
-    numWorkers = len(workerList)
+    global avgDistToFoodPoint
+    global bestFood
 
-
-    #foodScore
     myInv = getCurrPlayerInventory(currentState)
-    numFood = myInv.foodCount
-    foodLoc = self.myFood.coords
-    anthillLoc = myInv.getAnthill().coords
+    foodScore = myInv.foodCount
+    me = currentState.whoseTurn
+    workerAnts = workerAnts = getAntList(currentState, me, (WORKER,))
 
-    leastSteps = 9999999999999
-    bestAnt = None
-    #avgStepsToFoodPoint
-    for ant in workerList:
-        temp = stepsToFoodPoint(currentState, ant, bestFood)
-        if (temp < leastSteps):
-            leastSteps = temp
-            bestAnt = ant
+    if (len(workerAnts) == 0):
+        return 999999999
+    elif (len(workerAnts) > 1):
+        return 999999999
+
+    stepsToFoodGoal = 0
+    for i in range(11-foodScore):
+        if (avgDistToFoodPoint == None):
+            stepsToFoodGoal += 1
+        else:
+            stepsToFoodGoal += avgDistToFoodPoint
+    
+    minStepsToFoodPoint = 99999999
+    for worker in workerAnts:
+        temp = stepsToFoodPoint(currentState, worker, bestFood)
+        if (temp < minStepsToFoodPoint):
+            minStepsToFoodPoint = temp
+
+    stepsToFoodGoal += minStepsToFoodPoint
+    return stepsToFoodGoal
+    
         
         
 ### Calculates the necessary steps to get +1 food point ###   
-
 def stepsToFoodPoint(currentState, workerAnt, bestFood):
     #Check if the ant is carrying food, then we only need steps to nearest constr
     if (workerAnt.carrying):
@@ -158,7 +179,7 @@ def stepsToFoodPoint(currentState, workerAnt, bestFood):
         return dist
     #Otherwise, calculate the entire cycle the ant would need to complete to get +1 food point
     else:
-        dist = stepsToReach(currentState, workerAnt.coords, bestFood[0]) + stepsToReach(currentState, bestFood[0], bestFood[1])
+        dist = stepsToReach(currentState, workerAnt.coords, bestFood[0].coords) + stepsToReach(currentState, bestFood[0].coords, bestFood[1])
         return dist
         
     #Should never happen.
@@ -183,6 +204,8 @@ def getMove(currentState):
         node.setUtility(stateUtility)
         moveNodes.append(node)
         
+    print(len(moveNodes))
+    print("\n")
     bestMoveFromNodeList = bestMove(moveNodes).move
             
     return bestMoveFromNodeList
@@ -197,8 +220,11 @@ def bestMove(moveNodes):
     
     return bestNode
 
-def assignBestFood(currentState, myTunnel, myHill):
+def assignGlobalVars(currentState, myTunnel, myHill):
     
+    global bestFood
+    global avgDistToFoodPoint
+
     foods = getConstrList(currentState, None, (FOOD,))
     bestTunnelDist = 50
     bestHillDist = 50
@@ -219,6 +245,16 @@ def assignBestFood(currentState, myTunnel, myHill):
         bestFood = (bestHillFood, myHill)
     else :
         bestFood = (bestTunnelFood, myTunnel)
+
+    me = currentState.whoseTurn
+    workerAnts = getAntList(currentState, me, (WORKER,))
+
+    for worker in workerAnts:
+        print("this loop ran once!\n")
+        foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords, bestFood[1])
+        print("steps between hill and food: " + str(foodToTunnelDist))
+        marginalFoodPointCost = foodToTunnelDist * 2
+    avgDistToFoodPoint = marginalFoodPointCost
 
 class MoveNode():
     
