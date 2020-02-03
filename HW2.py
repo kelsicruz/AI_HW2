@@ -13,6 +13,7 @@ import math
 #global vars
 bestFood = None
 avgDistToFoodPoint = None
+avgDistToEnemyHill = None
 ##
 #AIPlayer
 #Description: The responsbility of this class is to interact with the game by
@@ -142,6 +143,8 @@ def heuristicStepsToGoal(currentState):
 
     stepsToGoal = stepsToFoodGoal(currentState)
     
+    stepsToGoal += stepsToAntHillGoal(currentState)
+    
     stepsToGoal += getTotalEnemyHealth(currentState)
     #print("total steps to goal: " + str(stepsToGoal) + "\n")
     return stepsToGoal
@@ -206,7 +209,42 @@ def stepsToQueenGoal(currentState):
     
 
 def stepsToAntHillGoal(currentState):
-    pass
+    # Didn't use... do I need?
+    global avgDistToEnemyHill
+
+    myInv = getCurrPlayerInventory(currentState)
+    enemyInv = getEnemyInv(self, currentState)
+    me = currentState.whoseTurn
+    foodPoints = myInv.foodCount
+
+    #enemyAnthill (tuple) - Coordinates of enemy's anthill
+    enemyAnthill = enemyInv.getAnthill().coords
+    
+    #allMyAnts (list) - List of all ants NOT including queen.
+    allMyAnts = getAntList(currentState, me, (WORKER, DRONE, SOLDIER, R_SOLDIER)
+
+
+    stepsToAnthillGoal = 0
+
+    #Encourage making an ant if we don't have any
+    if (len(allMyAnts) == 0 and foodPoints >=1):
+        # how to handle no ants? dist would be infinite
+        stepsToAntHillGoal = 9999999
+    
+    else:    
+        #Add the distance between all my ants and the enemy's hill
+        for ant in len(allMyAnts):
+            stepsToAnthillGoal += stepsToReach(currentState, ant.coords, enemyAnthill)
+    
+        minStepsToEnemyHill = 99999999
+        for ant in allMyAnts:
+            temp = stepsToReach(currentState, ant.coords, enemyAnthill)
+            if (temp < minStepsToEnemyHill):
+                minStepsToEnemyHill = temp
+
+        stepsToAntHillGoal += minStepsToEnemyHill
+    
+    return stepsToAntHillGoal
     
 def getMove(currentState):
     moves = listAllLegalMoves(currentState)
@@ -244,6 +282,7 @@ def assignGlobalVars(currentState, myTunnel, myHill):
     
     global bestFood
     global avgDistToFoodPoint
+    global avgDistToEnemyHill
 
     foods = getConstrList(currentState, None, (FOOD,))
     bestTunnelDist = 50
@@ -268,6 +307,15 @@ def assignGlobalVars(currentState, myTunnel, myHill):
 
     me = currentState.whoseTurn
     workerAnts = getAntList(currentState, me, (WORKER,))
+    allAnts = getAntList(currentState, me, (WORKER, DRONE, SOLDIER, R_SOLDIER))
+
+    totalDistToAnthill = 0
+    if(len(allAnts) == 0):
+        avgDistToEnemyHill = 999999999
+    else:
+        for ant in allAnts:
+            totalDistToAnthill += stepsToReach(currentState, ant.coords, enemyAnthill)
+        avgDistToEnemyHill = totalDistToAnthill/len(allAnts)
 
     for worker in workerAnts:
         #print("this loop ran once!\n")
