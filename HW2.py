@@ -204,7 +204,7 @@ def stepsToAntHillGoal(currentState):
     
 def getMove(currentState):
     moves = listAllLegalMoves(currentState)
-    
+
     moveNodes = []
     
     #print("==============considering next move==============")
@@ -212,20 +212,21 @@ def getMove(currentState):
 
     for move in moves:
         nextState = getNextState(currentState, move)
-        
         stateUtility = heuristicStepsToGoal(nextState)
         node = MoveNode(move, nextState)
         node.setUtility(stateUtility)
         moveNodes.append(node)
         
     #print(len(moveNodes))
-    bestMoveFromNodeList = bestMove(moveNodes).move
+    #print(MoveNode.toString(moveNodes[0]))
+    bestMoveNode = bestMove(moveNodes)
+    retMove = bestMoveNode.move
             
-    return bestMoveFromNodeList
+    return retMove
 
 def bestMove(moveNodes):
     bestNodeUtility = 99999999
-    bestNode = None
+    bestNode = moveNodes[0]
     for moveNode in moveNodes:
         if (moveNode.utility < bestNodeUtility):
             bestNode = moveNode
@@ -263,9 +264,9 @@ def assignGlobalVars(currentState, myTunnel, myHill):
     workerAnts = getAntList(currentState, me, (WORKER,))
 
     for worker in workerAnts:
-        print("this loop ran once!\n")
+        #print("this loop ran once!\n")
         foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords, bestFood[1])
-        print("steps between hill and food: " + str(foodToTunnelDist))
+        #print("steps between hill and food: " + str(foodToTunnelDist))
         marginalFoodPointCost = foodToTunnelDist * 2
     avgDistToFoodPoint = marginalFoodPointCost
     
@@ -294,19 +295,28 @@ class MoveNode():
         
     def setUtility(self, newUtility):
         self.utility = newUtility + self.depth
-"""     
+
+    def __str__(self):
+        return "Move: " + str(self.move) + ", Utility: " + str(self.utility)
+    
 ##
 #TEST CODE FOLLOWS
 ##
 print("Test code is being run")
 
+#get all necessary values from gameState
 testState = GameState.getBasicState()
+me = testState.whoseTurn
+myTunnel = getConstrList(testState, me, (TUNNEL,))[0].coords
+myHill = getConstrList(testState, me, (ANTHILL,))[0].coords
         
 #getMove() test
 move = getMove(testState)
 if (move == None):
     print("Error in getMove(). Null move returned.\n")
-        
+else:
+    print("getMove() returned: " + str(move))
+#end getMove() test     
         
         
 #bestMove() test
@@ -324,12 +334,14 @@ bestNode = bestMove(moveNodes)
 
 if (bestNode == None):
     print("Error in bestMove(). Null node returned.\n")
+elif (bestNode.utility == None):
+    print("Error in bestMove(). Utility was not set.\n")
 else:
-    if (bestNode.utility == None):
-        print("Error in bestMove(). Utility was not set.\n")
+    print("bestMove() returned this MoveNode: " + str(bestNode))
+#end bestMove() test
         
 print("Test code has been run")
-"""
+
 
 
 
