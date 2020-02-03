@@ -9,12 +9,14 @@ from Move import Move
 from GameState import *
 from AIPlayerUtils import *
 
-
+#global vars
+bestFood = None
 ##
 #AIPlayer
 #Description: The responsbility of this class is to interact with the game by
-#deciding a valid move based on a given game state. This class has methods that
-#will be implemented by students in Dr. Nuxoll's AI course.
+#deciding a valid move based on a given game state.  This class has methods
+#that
+#will be implemented by students in Dr.  Nuxoll's AI course.
 #
 #Variables:
 #	playerId - The id of the player.
@@ -25,7 +27,6 @@ class AIPlayer(Player):
         self.resetPlayerData()
         
     def resetPlayerData(self):
-        self.bestFood = None
         self.myTunnel = None
         self.myHill = None
         self.avgDistToFoodPoint = None
@@ -42,7 +43,7 @@ class AIPlayer(Player):
             return [(2,1), (7, 1), 
                     (0,3), (1,3), (2,3), (3,3), \
                     (4,3), (5,3), (6,3), \
-                    (5,2), (6,2) ];
+                    (5,2), (6,2)]
         elif currentState.phase == SETUP_PHASE_2:
             moves = []
             for y in range(6, 10):
@@ -59,7 +60,8 @@ class AIPlayer(Player):
     #Description: Gets the next move from the Player.
     #
     #Parameters:
-    #	currentState - The state of the current game waiting for the player's move (GameState)
+    #	currentState - The state of the current game waiting for the player's move
+    #	(GameState)
     #
     #Return: The Move to be made
     ##
@@ -116,7 +118,8 @@ class AIPlayer(Player):
     #Parameters:
     #	currentState - A clone of the current state (GameState)
     #	attackingAnt - The ant currently making the attack (Ant)
-    #	enemyLocation - The Locations of the Enemies that can be attacked (Location[])
+    #	enemyLocation - The Locations of the Enemies that can be attacked
+    #	(Location[])
     ##
     def getAttack(self, currentState, attackingAnt, enemyLocations):
         return enemyLocations[0]
@@ -135,7 +138,8 @@ def heuristicStepsToGoal(currentState):
     return 999999
         
         
-        #returns a heuristic guess of how many moves it will take the agent to win the game starting from the given state
+        #returns a heuristic guess of how many moves it will take the agent to
+        #win the game starting from the given state
     #divide steps to goal into steps to each type of win
 def stepsToFoodGoal(currentState):
     #get the board
