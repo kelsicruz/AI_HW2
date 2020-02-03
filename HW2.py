@@ -79,13 +79,31 @@ class AIPlayer(Player):
         if (self.myHill == None):
             self.myHill = getConstrList(currentState, me, (ANTHILL,))[0].coords
         
-        if (bestFood == None):
-            assignBestFood(currentState, self.myTunnel, self.myHill)
+        if (self.bestFood == None):
+            foods = getConstrList(currentState, None, (FOOD,))
+            bestTunnelDist = 50
+            bestHillDist = 50
+            bestTunnelFood = None
+            bestHillFood = None
+            
+            for food in foods:
+                dist = stepsToReach(currentState, self.myTunnel, food.coords)
+                if (dist < bestTunnelDist) :
+                    bestTunnelFood = food
+                    bestTunnelDist = dist
+                dist = stepsToReach(currentState, self.myHill, food.coords)
+                if (dist < bestHillDist) :
+                    bestHillFood = food
+                    bestHillDist = dist
+            
+            if (bestHillDist < bestTunnelDist):
+                self.bestFood = (bestHillFood, self.myHill)
+            else :
+                self.bestFood = (bestTunnelFood, self.myTunnel)
         #if (self.avgDistToFoodPoint == None and self.bestFood != None):
         #	for worker in workerAnts:
         #		print("this loop ran once!\n")
-        #		foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords,
-        #		bestFood[1])
+        #		foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords, bestFood[1])
 
         
 
@@ -136,22 +154,32 @@ def stepsToFoodGoal(currentState):
     numFood = myInv.foodCount
     foodLoc = self.myFood.coords
     anthillLoc = myInv.getAnthill().coords
-        
-    toFood = 0
-    toHill = 0
-    
+
+    leastSteps = 9999999999999
+    bestAnt = None
     #avgStepsToFoodPoint
     for ant in workerList:
-        toFood += stepsToFoodPoint(currentState, ant, foodLoc)
-        toHill += stepsToReach(currentState, foodLoc, anthillLoc)
-        cycle = toFood + toHill
-        # save in external variable? like ant1, ant2, etc?
+        temp = stepsToFoodPoint(currentState, ant, bestFood)
+        if temp < leastSteps
+            leastSteps = temp
+            bestAnt = ant
         
         
-    
-def stepsToFoodPoint(currentState, workerAnt, foodLocation):
-    steps = stepsToReach(currentState, workerAnt.coords, foodLocation)
-    return steps
+### Calculates the necessary steps to get +1 food point ###   
+
+def stepsToFoodPoint(currentState, workerAnt, bestFood):
+    #Check if the ant is carrying food, then we only need steps to nearest constr
+    if (workerAnt.carrying):
+        dist = stepsToReach(currentState, workerAnt.coords, bestFood[1])
+        return dist
+    #Otherwise, calculate the entire cycle the ant would need to complete to get +1 food point
+    else:
+        dist = stepsToReach(currentState, workerAnt.coords, bestFood[0]) + stepsToReach(currentState, bestFood[0], bestFood[1])
+        return dist
+        
+    #Should never happen.
+    print("Something went wrong in stepsToFoodPoint.\n")
+    return None
 
 def stepsToQueenGoal(currentState):
     pass
@@ -184,29 +212,7 @@ def bestMove(moveNodes):
             bestNodeUtility = moveNode.utility
     
     return bestNode
-
-def assignBestFood(currentState, myTunnel, myHill):
-    
-    foods = getConstrList(currentState, None, (FOOD,))
-    bestTunnelDist = 50
-    bestHillDist = 50
-    bestTunnelFood = None
-    bestHillFood = None
             
-    for food in foods:
-        dist = stepsToReach(currentState, myTunnel, food.coords)
-        if (dist < bestTunnelDist) :
-            bestTunnelFood = food
-            bestTunnelDist = dist
-        dist = stepsToReach(currentState, myHill, food.coords)
-        if (dist < bestHillDist) :
-            bestHillFood = food
-            bestHillDist = dist
-            
-    if (bestHillDist < bestTunnelDist):
-        bestFood = (bestHillFood, myHill)
-    else :
-        bestFood = (bestTunnelFood, myTunnel)
 
 class MoveNode():
     
