@@ -151,10 +151,14 @@ def stepsToFoodGoal(currentState):
     foodLoc = self.myFood.coords
     anthillLoc = myInv.getAnthill().coords
 
-    
+    leastSteps = 9999999999999
+    bestAnt = None
     #avgStepsToFoodPoint
     for ant in workerList:
-        #stepsToFoodPoint
+        temp = stepsToFoodPoint(currentState, ant, bestFood)
+        if temp < leastSteps
+            leastSteps = temp
+            bestAnt = ant
         
         
 ### Calculates the necessary steps to get +1 food point ###   
