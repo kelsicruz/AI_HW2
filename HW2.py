@@ -87,6 +87,7 @@ class AIPlayer(Player):
         #		foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords,
         #		bestFood[1])
 
+
         
 
         selectedMove = getMove(currentState)
@@ -131,27 +132,38 @@ def stepsToFoodGoal(currentState):
     workerList = getAntList(currentState, me, (WORKER,))
     numWorkers = len(workerList)
 
+
     #foodScore
     myInv = getCurrPlayerInventory(currentState)
     numFood = myInv.foodCount
     foodLoc = self.myFood.coords
     anthillLoc = myInv.getAnthill().coords
-        
-    toFood = 0
-    toHill = 0
-    
+
+    leastSteps = 9999999999999
+    bestAnt = None
     #avgStepsToFoodPoint
     for ant in workerList:
-        toFood += stepsToFoodPoint(currentState, ant, foodLoc)
-        toHill += stepsToReach(currentState, foodLoc, anthillLoc)
-        cycle = toFood + toHill
-        # save in external variable? like ant1, ant2, etc?
+        temp = stepsToFoodPoint(currentState, ant, bestFood)
+        if (temp < leastSteps):
+            leastSteps = temp
+            bestAnt = ant
         
         
-    
-def stepsToFoodPoint(currentState, workerAnt, foodLocation):
-    steps = stepsToReach(currentState, workerAnt.coords, foodLocation)
-    return steps
+### Calculates the necessary steps to get +1 food point ###   
+
+def stepsToFoodPoint(currentState, workerAnt, bestFood):
+    #Check if the ant is carrying food, then we only need steps to nearest constr
+    if (workerAnt.carrying):
+        dist = stepsToReach(currentState, workerAnt.coords, bestFood[1])
+        return dist
+    #Otherwise, calculate the entire cycle the ant would need to complete to get +1 food point
+    else:
+        dist = stepsToReach(currentState, workerAnt.coords, bestFood[0]) + stepsToReach(currentState, bestFood[0], bestFood[1])
+        return dist
+        
+    #Should never happen.
+    print("Something went wrong in stepsToFoodPoint.\n")
+    return None
 
 def stepsToQueenGoal(currentState):
     pass
