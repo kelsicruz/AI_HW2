@@ -20,70 +20,39 @@ from AIPlayerUtils import *
 #	playerId - The id of the player.
 ##
 class AIPlayer(Player):
-        
-	#__init__
-	#Description: Creates a new Player
-	#
-	#Parameters:
-	#	inputPlayerId - The id to give the new player (int)
-	#	cpy			  - whether the player is a copy (when playing itself)
-	##
 	def __init__(self, inputPlayerId):
-		super(AIPlayer,self).__init__(inputPlayerId, "HW2")
-	
-	##
-	#getPlacement
-	#
-	#Description: called during setup phase for each Construction that
-	#	must be placed by the player.  These items are: 1 Anthill on
-	#	the player's side; 1 tunnel on player's side; 9 grass on the
-	#	player's side; and 2 food on the enemy's side.
-	#
-	#Parameters:
-	#	construction - the Construction to be placed.
-	#	currentState - the state of the game at this point in time.
-	#
-	#Return: The coordinates of where the construction is to be placed
-	##
+		super(AIPlayer, self).__init__(inputPlayerId, "HW2")
+		self.resetPlayerData()
+		
+	def resetPlayerData(self):
+		self.bestFood = None
+		self.myTunnel = None
+		self.myHill = None
+		self.avgDistToFoodPoint = None
+
 	def getPlacement(self, currentState):
-		numToPlace = 0
-		#implemented by students to return their next move
-		if currentState.phase == SETUP_PHASE_1:	   #stuff on my side
-			numToPlace = 11
+	
+		me = currentState.whoseTurn
+		
+		if currentState.phase == SETUP_PHASE_1:
+			#Hill, Tunnel, Grass
+			self.resetPlayerData()
+			self.myNest = (2,1)
+			self.myTunnel = (7,1)
+			return [(2,1), (7, 1), 
+					(0,3), (1,3), (2,3), (3,3), \
+					(4,3), (5,3), (6,3), \
+					(5,2), (6,2) ];
+		elif currentState.phase == SETUP_PHASE_2:
 			moves = []
-			for i in range(0, numToPlace):
-				move = None
-				while move == None:
-					#Choose any x location
-					x = random.randint(0, 9)
-					#Choose any y location on your side of the board
-					y = random.randint(0, 3)
-					#Set the move if this space is empty
-					if currentState.board[x][y].constr == None and (x, y) not in moves:
-						move = (x, y)
-						#Just need to make the space non-empty. So I threw whatever I felt like in there.
-						currentState.board[x][y].constr == True
-				moves.append(move)
+			for y in range(6, 10):
+				for x in range(0,10):
+					if currentState.board[x][y].constr == None and len(moves) < 2:
+						moves.append((x,y))
 			return moves
-		elif currentState.phase == SETUP_PHASE_2:	#stuff on foe's side
-			numToPlace = 2
-			moves = []
-			for i in range(0, numToPlace):
-				move = None
-				while move == None:
-					#Choose any x location
-					x = random.randint(0, 9)
-					#Choose any y location on enemy side of the board
-					y = random.randint(6, 9)
-					#Set the move if this space is empty
-					if currentState.board[x][y].constr == None and (x, y) not in moves:
-						move = (x, y)
-						#Just need to make the space non-empty. So I threw whatever I felt like in there.
-						currentState.board[x][y].constr == True
-				moves.append(move)
-			return moves
-		else:
-			return [(0, 0)]
+			
+		else:            
+			return None  #should never happen
 	
 	##
 	#getMove
@@ -95,13 +64,48 @@ class AIPlayer(Player):
 	#Return: The Move to be made
 	##
 	def getMove(self, currentState):
-		moves = listAllLegalMoves(currentState)
-		selectedMove = moves[random.randint(0,len(moves) - 1)];
+		me = currentState.whoseTurn
+		workerAnts = getAntList(currentState, me, (WORKER,))
+		if (me == PLAYER_ONE):
+			enemy = PLAYER_TWO
+		else :
+			enemy = PLAYER_ONE
+		
+		if (self.myTunnel == None):
+			self.myTunnel = getConstrList(currentState, me, (TUNNEL,))[0].coords
+			
+		if (self.myHill == None):
+			self.myHill = getConstrList(currentState, me, (ANTHILL,))[0].coords
+		
+		if (self.bestFood == None):
+			foods = getConstrList(currentState, None, (FOOD,))
+			bestTunnelDist = 50
+			bestHillDist = 50
+			bestTunnelFood = None
+			bestHillFood = None
+			
+			for food in foods:
+				dist = stepsToReach(currentState, self.myTunnel, food.coords)
+				if (dist < bestTunnelDist) :
+					bestTunnelFood = food
+					bestTunnelDist = dist
+				dist = stepsToReach(currentState, self.myHill, food.coords)
+				if (dist < bestHillDist) :
+					bestHillFood = food
+					bestHillDist = dist
+			
+			if (bestHillDist < bestTunnelDist):
+				self.bestFood = (bestHillFood, self.myHill)
+			else :
+				self.bestFood = (bestTunnelFood, self.myTunnel)
+		#if (self.avgDistToFoodPoint == None and self.bestFood != None):
+		#	for worker in workerAnts:
+		#		print("this loop ran once!\n")
+		#		foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords, bestFood[1])
 
-		#don't do a build move if there are already 3+ ants
-		numAnts = len(currentState.inventories[currentState.whoseTurn].ants)
-		while (selectedMove.moveType == BUILD and numAnts >= 3):
-			selectedMove = moves[random.randint(0,len(moves) - 1)];
+		
+
+		selectedMove = getMove(currentState)
 			
 		return selectedMove
 	
@@ -115,8 +119,7 @@ class AIPlayer(Player):
 	#	enemyLocation - The Locations of the Enemies that can be attacked (Location[])
 	##
 	def getAttack(self, currentState, attackingAnt, enemyLocations):
-		#Attack a random enemy.
-		return enemyLocations[random.randint(0, len(enemyLocations) - 1)]
+		return enemyLocations[0]
 
 	##
 	#registerWin
@@ -127,11 +130,9 @@ class AIPlayer(Player):
 		#method templaste, not implemented
 		pass
 
-
-	#returns a heuristic guess of how many moves it will take the agent to win the game starting from the given state
-#divide steps to goal into steps to each type of win
 def heuristicStepsToGoal(currentState):
-    return 3
+	#test value
+	return 999999
         
 		
         #returns a heuristic guess of how many moves it will take the agent to win the game starting from the given state
