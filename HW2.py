@@ -134,17 +134,33 @@ class AIPlayer(Player):
         #returns a heuristic guess of how many moves it will take the agent to win the game starting from the given state
 	#divide steps to goal into steps to each type of win
 	def stepsToFoodGoal(currentState):
-	
-		#numWorkers
+        #get the board
+        # fastClone(currentState)
 		
-		#foodScore
-		
-		#avgStepsToFoodPoint
+        #get numWorkers
+		workerList = getAntList(currentState, me, (WORKER,))
+        numWorkers = len(workerList)
 
-	#added comment
-	
-	def stepsToFoodPoint(currentState, workerAnt):
+		#foodScore
+        myInv = getCurrPlayerInventory(currentState)
+        numFood = myInv.foodCount
+        foodLoc = self.myFood.coords
+        anthillLoc = myInv.getAnthill().coords
 		
+        toFood = 0
+        toHill = 0
+		#avgStepsToFoodPoint
+        for ant in workerList:
+            toFood += stepsToFoodPoint(currentState, ant, foodLoc)
+            toHill += stepsToReach(currentState, foodLoc, anthillLoc)
+            cycle = toFood + toHill
+            # save in external variable? like ant1, ant2, etc?
+        
+        
+	
+	def stepsToFoodPoint(currentState, workerAnt, foodLocation):
+		steps = stepsToReach(currentState, workerAnt.coords, foodLocation)
+        return steps
 	
 	def stepsToQueenGoal(currentState):
 	
