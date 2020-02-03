@@ -127,8 +127,8 @@ def heuristicStepsToGoal(currentState):
         #returns a heuristic guess of how many moves it will take the agent to
         #win the game starting from the given state
     #divide steps to goal into steps to each type of win
-### Should return 
 
+### Return steps needed to win via 11 food ###
 def stepsToFoodGoal(currentState):
     #get the board
     # fastClone(currentState)
@@ -137,26 +137,32 @@ def stepsToFoodGoal(currentState):
     workerList = getAntList(currentState, me, (WORKER,))
     numWorkers = len(workerList)
 
-
     #foodScore
     myInv = getCurrPlayerInventory(currentState)
     numFood = myInv.foodCount
     foodLoc = self.myFood.coords
+    goalFood = 11
     anthillLoc = myInv.getAnthill().coords
+    foodNeeded = goalFood - numFood
 
     leastSteps = 9999999999999
-    bestAnt = None
-    #avgStepsToFoodPoint
+    totalSteps = 0
+    smallestAnt = None
+    antsMoved = 0
+    #for the amount of food points we need
+    #check each ant that hasn't moved for the ant that has the smallest steps to +1 food
     for ant in workerList:
-        temp = stepsToFoodPoint(currentState, ant, bestFood)
-        if (temp < leastSteps):
-            leastSteps = temp
-            bestAnt = ant
+        if !(ant.hasMoved):
+            totalSteps += stepsToFoodPoint(currentState,ant)
+            ant.hasMoved = True
+            antsMoved += 1
+            foodNeeded -= 1
+
         
         
 ### Calculates the necessary steps to get +1 food point ###   
 
-def stepsToFoodPoint(currentState, workerAnt, bestFood):
+def stepsToFoodPoint(currentState, workerAnt):
     #Check if the ant is carrying food, then we only need steps to nearest constr
     if (workerAnt.carrying):
         dist = stepsToReach(currentState, workerAnt.coords, bestFood[1])
@@ -173,6 +179,7 @@ def stepsToFoodPoint(currentState, workerAnt, bestFood):
 def stepsToQueenGoal(currentState):
     pass
     
+
 def stepsToAntHillGoal(currentState):
     pass
     
