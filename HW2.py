@@ -8,6 +8,7 @@ from Ant import UNIT_STATS
 from Move import Move
 from GameState import *
 from AIPlayerUtils import *
+import math
 
 #global vars
 bestFood = None
@@ -28,6 +29,10 @@ class AIPlayer(Player):
         self.resetPlayerData()
         
     def resetPlayerData(self):
+        global bestFood
+        global avgDistToFoodPoint
+        bestFood = None
+        avgDistToFoodPoint = None
         self.myTunnel = None
         self.myHill = None
 
@@ -125,10 +130,15 @@ class AIPlayer(Player):
 
 def heuristicStepsToGoal(currentState):
     #test value
+    me = currentState.whoseTurn
+    myQueen = getAntList(currentState, me, (QUEEN,))[0]
+
+    #if a state has a dead queen, it should be avoided!!!
+    if (myQueen.health == 0):
+        return 99999999
+
     stepsToGoal = stepsToFoodGoal(currentState)
-    print("total steps to goal: ")
-    print(stepsToGoal)
-    print("\n")
+    #print("total steps to goal: " + str(stepsToGoal) + "\n")
     return stepsToGoal
         
         
@@ -149,20 +159,17 @@ def stepsToFoodGoal(currentState):
     workerAnts = workerAnts = getAntList(currentState, me, (WORKER,))
 
     if (len(workerAnts) == 0):
-        return 999999999
-    elif (len(workerAnts) > 1):
-        return 999999999
+        return 99999999
+    elif(len(workerAnts) > 1):
+        return 99999999
 
     stepsToFoodGoal = 0
     for i in range(11-foodScore):
-        if (avgDistToFoodPoint == None):
-            stepsToFoodGoal += 1
-        else:
-            stepsToFoodGoal += avgDistToFoodPoint
+        stepsToFoodGoal += avgDistToFoodPoint
     
     minStepsToFoodPoint = 99999999
     for worker in workerAnts:
-        temp = stepsToFoodPoint(currentState, worker, bestFood)
+        temp = stepsToFoodPoint(currentState, worker)
         if (temp < minStepsToFoodPoint):
             minStepsToFoodPoint = temp
 
@@ -172,16 +179,19 @@ def stepsToFoodGoal(currentState):
         
         
 ### Calculates the necessary steps to get +1 food point ###   
-def stepsToFoodPoint(currentState, workerAnt, bestFood):
+def stepsToFoodPoint(currentState, workerAnt):
+    global bestFood
     #Check if the ant is carrying food, then we only need steps to nearest constr
     if (workerAnt.carrying):
         dist = stepsToReach(currentState, workerAnt.coords, bestFood[1])
-        return dist
+        #dist = distance(workerAnt.coords, bestFood[1])
     #Otherwise, calculate the entire cycle the ant would need to complete to get +1 food point
     else:
         dist = stepsToReach(currentState, workerAnt.coords, bestFood[0].coords) + stepsToReach(currentState, bestFood[0].coords, bestFood[1])
-        return dist
+        #dist = distance(workerAnt.coords, bestFood[0].coords) + distance(bestFood[0].coords, bestFood[1])
         
+   # print("Distance to next step in food goal: " + str(dist))
+    return dist
     #Should never happen.
     print("Something went wrong in stepsToFoodPoint.\n")
     return None
@@ -197,21 +207,24 @@ def getMove(currentState):
     
     moveNodes = []
     
+    #print("==============considering next move==============")
+    #print(bestFood[0].coords)
+
     for move in moves:
         nextState = getNextState(currentState, move)
+        
         stateUtility = heuristicStepsToGoal(nextState)
         node = MoveNode(move, nextState)
         node.setUtility(stateUtility)
         moveNodes.append(node)
         
-    print(len(moveNodes))
-    print("\n")
+    #print(len(moveNodes))
     bestMoveFromNodeList = bestMove(moveNodes).move
             
     return bestMoveFromNodeList
 
 def bestMove(moveNodes):
-    bestNodeUtility = 999999999
+    bestNodeUtility = 99999999
     bestNode = None
     for moveNode in moveNodes:
         if (moveNode.utility < bestNodeUtility):
@@ -267,7 +280,7 @@ class MoveNode():
         
     def setUtility(self, newUtility):
         self.utility = newUtility + self.depth
-        
+"""     
 ##
 #TEST CODE FOLLOWS
 ##
@@ -302,7 +315,7 @@ else:
         print("Error in bestMove(). Utility was not set.\n")
         
 print("Test code has been run")
-
+"""
 
 
 
