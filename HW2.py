@@ -21,7 +21,7 @@ avgDistToFoodPoint = None
 #will be implemented by students in Dr.  Nuxoll's AI course.
 #
 #Variables:
-#	playerId - The id of the player.
+#   playerId - The id of the player.
 ##
 class AIPlayer(Player):
     def __init__(self, inputPlayerId):
@@ -48,7 +48,7 @@ class AIPlayer(Player):
             return [(2,1), (7, 1), 
                     (0,3), (1,3), (2,3), (3,3), \
                     (4,3), (5,3), (6,3), \
-                    (5,2), (6,2)]
+                    (8,3), (9,3)]
         elif currentState.phase == SETUP_PHASE_2:
             moves = []
             for y in range(6, 10):
@@ -65,9 +65,9 @@ class AIPlayer(Player):
     #Description: Gets the next move from the Player.
     #
     #Parameters:
-    #	currentState - The state of the current game waiting for the player's
-    #	move
-    #	(GameState)
+    #   currentState - The state of the current game waiting for the player's
+    #   move
+    #   (GameState)
     #
     #Return: The Move to be made
     ##
@@ -94,10 +94,10 @@ class AIPlayer(Player):
             
 
         #if (self.avgDistToFoodPoint == None and self.bestFood != None):
-        #	for worker in workerAnts:
-        #		print("this loop ran once!\n")
-        #		foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords,
-        #		bestFood[1])
+        #   for worker in workerAnts:
+        #       print("this loop ran once!\n")
+        #       foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords,
+        #       bestFood[1])
 
 
         
@@ -111,10 +111,10 @@ class AIPlayer(Player):
     #Description: Gets the attack to be made from the Player
     #
     #Parameters:
-    #	currentState - A clone of the current state (GameState)
-    #	attackingAnt - The ant currently making the attack (Ant)
-    #	enemyLocation - The Locations of the Enemies that can be attacked
-    #	(Location[])
+    #   currentState - A clone of the current state (GameState)
+    #   attackingAnt - The ant currently making the attack (Ant)
+    #   enemyLocation - The Locations of the Enemies that can be attacked
+    #   (Location[])
     ##
     def getAttack(self, currentState, attackingAnt, enemyLocations):
         return enemyLocations[0]
@@ -138,6 +138,8 @@ def heuristicStepsToGoal(currentState):
         return 99999999
 
     stepsToGoal = stepsToFoodGoal(currentState)
+    
+    stepsToGoal += getTotalEnemyHealth(currentState)
     #print("total steps to goal: " + str(stepsToGoal) + "\n")
     return stepsToGoal
         
@@ -156,11 +158,9 @@ def stepsToFoodGoal(currentState):
     myInv = getCurrPlayerInventory(currentState)
     foodScore = myInv.foodCount
     me = currentState.whoseTurn
-    workerAnts = workerAnts = getAntList(currentState, me, (WORKER,))
+    workerAnts = getAntList(currentState, me, (WORKER,))
 
     if (len(workerAnts) == 0):
-        return 99999999
-    elif(len(workerAnts) > 1):
         return 99999999
 
     stepsToFoodGoal = 0
@@ -268,6 +268,20 @@ def assignGlobalVars(currentState, myTunnel, myHill):
         print("steps between hill and food: " + str(foodToTunnelDist))
         marginalFoodPointCost = foodToTunnelDist * 2
     avgDistToFoodPoint = marginalFoodPointCost
+    
+def getTotalEnemyHealth(currentState):
+    me = currentState.whoseTurn
+    if (me == PLAYER_ONE):
+        enemy = PLAYER_TWO
+    else :
+        enemy = PLAYER_ONE
+    
+    enemyAnts = getAntList(currentState, enemy, (WORKER,QUEEN,DRONE,SOLDIER,R_SOLDIER))
+    totalEnemyHealth = 0
+    for ant in enemyAnts:
+        totalEnemyHealth += ant.health
+        
+    return totalEnemyHealth
 
 class MoveNode():
     
