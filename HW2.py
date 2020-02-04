@@ -230,7 +230,7 @@ def stepsToAntHillGoal(currentState):
 
     #Encourage making an ant if we don't have any
     if (len(allMyAnts) == 0 and foodPoints >=1):
-        # how to handle no ants? dist would be infinite
+        # how to handle no ants? dist would be infinite.. return a bogus number for now
         stepsToAntHillGoal = 9999999
     
     else:    
@@ -404,8 +404,28 @@ class TestHeuristicMethods(unittest.TestCase):
     testAnt = ant(self, (0,0), 1, 2) #makes a basic worker ant located at 0,0
 
     def test_stepsToAntHillGoal(testState):
+        global avgDistToFoodPoint
+        global bestFood
+
+        myInv = getCurrPlayerInventory(testState)
+        workerAnts = getAntList(testState, me, (WORKER,))
+        enemyInv = getEnemyInv(self, testState)
+        enemyAnthill = enemyInv.getAnthill().coords
+        allMyAnts = getAntList(currentState, me, (WORKER, DRONE, SOLDIER, R_SOLDIER)
+
         # CASE 1: Make sure the fxn never returns null.
         assert stepsToAntHillGoal(testState) is not None
+
+        # CASE 2: If we have no ants and food points are >= 1, return bogus num
+        allMyAnts.clear()
+        myInv.foodCount = 1
+        assertEqual(stepsToAntHillGoal(testState), 9999999)
+
+        # CASE 3: Fxn returns expected val w normal inputs
+        allMyAnts.appent(testAnt)
+        testAntDist = 2*(stepsToReach(testState, testAnt.coords, enemyAnthill))
+
+        assertEqual(stepsToAntHillGoal(testState), testAntDist)
 
     def test_stepsToFoodPoint(testState, testAnt):
         global bestFood
