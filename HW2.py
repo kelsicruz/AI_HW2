@@ -1,5 +1,6 @@
 import random
 import sys
+import unittest
 sys.path.append("..")  #so other modules can be found in parent dir
 from Player import *
 from Constants import *
@@ -200,6 +201,7 @@ def stepsToFoodPoint(currentState, workerAnt):
         
    # print("Distance to next step in food goal: " + str(dist))
     return dist
+    
     #Should never happen.
     print("Something went wrong in stepsToFoodPoint.\n")
     return None
@@ -395,6 +397,52 @@ else:
 #end bestMove() test
         
 print("Test code has been run")
+
+### Kelsi's Unit Tests ###
+class TestHeuristicMethods(unittest.TestCase):
+    testState = GameState.getBasicState()
+    testAnt = ant(self, (0,0), 1, 2) #makes a basic worker ant located at 0,0
+
+    def test_stepsToAntHillGoal(testState):
+        # CASE 1: Make sure the fxn never returns null.
+        assert stepsToAntHillGoal(testState) is not None
+
+    def test_stepsToFoodPoint(testState, testAnt):
+        global bestFood
+        # CASE 1: If the ant is carrying food, get distance from ant to tunnel.
+        testAnt.carrying = True
+        expectedDistance1 = stepsToReach(testState, workerAnt.coords, bestFood[1])
+        assertEqual(stepsToFoodPoint(testState, testAnt), expectedDistance1)
+
+        # CASE 2: If the ant is not carrying food, get distance from ant -> food -> tunnel
+        testAnt.carrying = False
+        expectedDistance2 = stepsToReach(testState, workerAnt.coords, bestFood[0].coords) + stepsToReach(testState, bestFood[0].coords, bestFood[1])
+        assertEqual(stepsToFoodPoint(testState, testAnt), expectedDistance2)
+
+
+    def test_stepsToFoodGoal(testState, testAnt):
+        global avgDistToFoodPoint
+        global bestFood
+
+        myInv = getCurrPlayerInventory(testState)
+        workerAnts = getAntList(testState, me, (WORKER,))
+
+        # CASE 1: Make sure the fxn never returns null.
+        assert stepsToFoodGoal(testState) is not None
+
+        # CASE 2: Fxn returns bogus num if we have no ants
+        workerAnts.clear()
+        assertEqual(stepsToFoodGoal(testState), 99999999)
+
+        # CASE 3: Fxn returns proper num in normal case
+        workerAnts.append(testAnt)
+        myInv.foodCount = 10
+        avgDistToFoodPoint = 2
+        testAnt.carrying = True
+        expectedSteps = 2 + stepsToFoodPoint(testState, testAnt)
+
+        assertEqual(stepsToFoodGoal(testState), expectedSteps)
+
 
 
 
