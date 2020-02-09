@@ -145,9 +145,8 @@ def heuristicStepsToGoal(currentState):
         stepsToGoal += stepsToReach(currentState, ant.coords, theirQueen.coords)/3
 
     antCap = len(fightAnts) - 2
-    if antCap > 0:
-        for i in range(antCap):
-            stepsToGoal = stepsToGoal * 2
+    for i in range(antCap):
+        stepsToGoal = stepsToGoal * 2
 
     return stepsToGoal
         
@@ -389,11 +388,3 @@ else:
 #end bestMove() test
         
 print("Test code has been run")
-
-
-
-
-        
-            
-        
-            
