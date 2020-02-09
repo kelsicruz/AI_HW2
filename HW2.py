@@ -121,7 +121,16 @@ class AIPlayer(Player):
 #in the current version, only evaluates proximity to winning via food collection
 def heuristicStepsToGoal(currentState):
     me = currentState.whoseTurn
+    if (me == PLAYER_ONE):
+        enemy = PLAYER_TWO
+    else :
+        enemy = PLAYER_ONE
     myQueen = getAntList(currentState, me, (QUEEN,))[0]
+    theirQueens = getAntList(currentState, enemy, (QUEEN,))
+    if (len(theirQueens) == 0):
+        return 0
+    theirQueen = theirQueens[0]
+    fightAnts = getAntList(currentState, me, (SOLDIER, R_SOLDIER, DRONE))
 
     #if a state has a dead queen, it should be avoided!!!
     if (myQueen.health == 0):
@@ -131,6 +140,14 @@ def heuristicStepsToGoal(currentState):
     
     #add the enemy health to our heuristic measure in order to encourage attacks
     stepsToGoal += getTotalEnemyHealth(currentState)
+
+    for ant in fightAnts:
+        stepsToGoal += stepsToReach(currentState, ant.coords, theirQueen.coords)/3
+
+    antCap = len(fightAnts) - 2
+    if antCap > 0:
+        for i in range(antCap):
+            stepsToGoal = stepsToGoal * 2
 
     return stepsToGoal
         
@@ -148,9 +165,10 @@ def stepsToFoodGoal(currentState):
     foodScore = myInv.foodCount
     me = currentState.whoseTurn
     workerAnts = getAntList(currentState, me, (WORKER,))
+    
 
     #cant collect food without workers
-    if (len(workerAnts) == 0):
+    if (len(workerAnts) != 1):
         return 99999999
 
     #in assignGlobalVars, we assigned avgDistToFoodPoint
@@ -166,7 +184,9 @@ def stepsToFoodGoal(currentState):
         if (temp < minStepsToFoodPoint):
             minStepsToFoodPoint = temp
 
+
     stepsToFoodGoal += minStepsToFoodPoint
+    
     return stepsToFoodGoal
     
         
@@ -203,7 +223,7 @@ def getMove(currentState):
 
     frontierNodes.append(rootNode)
 
-    while ((len(frontierNodes) != 0) and (len(frontierNodes) < 100)):
+    while ((len(frontierNodes) != 0) and (len(frontierNodes) < 60)):
         expandMe = frontierNodes.pop(0)
         expandedNodes.append(expandMe)
         newFrontiers = expandNode(expandMe)
@@ -216,6 +236,7 @@ def getMove(currentState):
 
     while (bestNode.depth != 1):
         bestNode = bestNode.parent
+
 
     return bestNode.move
 
