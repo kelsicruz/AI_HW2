@@ -8,9 +8,11 @@ from Ant import UNIT_STATS
 from Move import Move
 from GameState import *
 from AIPlayerUtils import *
+import math
 
 #global vars
 bestFood = None
+avgDistToFoodPoint = None
 ##
 #AIPlayer
 #Description: The responsbility of this class is to interact with the game by
@@ -19,17 +21,20 @@ bestFood = None
 #will be implemented by students in Dr.  Nuxoll's AI course.
 #
 #Variables:
-#	playerId - The id of the player.
+#   playerId - The id of the player.
 ##
 class AIPlayer(Player):
     def __init__(self, inputPlayerId):
-        super(AIPlayer, self).__init__(inputPlayerId, "HW2")
+        super(AIPlayer, self).__init__(inputPlayerId, "AStarAgent_gieseman21_cruzk20")
         self.resetPlayerData()
         
     def resetPlayerData(self):
+        global bestFood
+        global avgDistToFoodPoint
+        bestFood = None
+        avgDistToFoodPoint = None
         self.myTunnel = None
         self.myHill = None
-        self.avgDistToFoodPoint = None
 
     def getPlacement(self, currentState):
     
@@ -43,7 +48,7 @@ class AIPlayer(Player):
             return [(2,1), (7, 1), 
                     (0,3), (1,3), (2,3), (3,3), \
                     (4,3), (5,3), (6,3), \
-                    (5,2), (6,2)]
+                    (8,3), (9,3)]
         elif currentState.phase == SETUP_PHASE_2:
             moves = []
             for y in range(6, 10):
@@ -60,14 +65,19 @@ class AIPlayer(Player):
     #Description: Gets the next move from the Player.
     #
     #Parameters:
-    #	currentState - The state of the current game waiting for the player's move
-    #	(GameState)
+    #   currentState - The state of the current game waiting for the player's
+    #   move
+    #   (GameState)
     #
     #Return: The Move to be made
     ##
     def getMove(self, currentState):
         me = currentState.whoseTurn
         workerAnts = getAntList(currentState, me, (WORKER,))
+        global bestFood
+        global avgDistToFoodPoint
+
+        #starts by assigning some variables to improve evaluation of proximity to scoring 11 food
         if (me == PLAYER_ONE):
             enemy = PLAYER_TWO
         else :
@@ -79,16 +89,8 @@ class AIPlayer(Player):
         if (self.myHill == None):
             self.myHill = getConstrList(currentState, me, (ANTHILL,))[0].coords
         
-        if (bestFood == None):
-            assignBestFood(currentState, self.myTunnel, self.myHill)
-        #if (self.avgDistToFoodPoint == None and self.bestFood != None):
-        #	for worker in workerAnts:
-        #		print("this loop ran once!\n")
-        #		foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords,
-        #		bestFood[1])
-
-
-        
+        if (bestFood == None and avgDistToFoodPoint == None):
+            assignGlobalVars(currentState, self.myTunnel, self.myHill)
 
         selectedMove = getMove(currentState)
             
@@ -99,10 +101,10 @@ class AIPlayer(Player):
     #Description: Gets the attack to be made from the Player
     #
     #Parameters:
-    #	currentState - A clone of the current state (GameState)
-    #	attackingAnt - The ant currently making the attack (Ant)
-    #	enemyLocation - The Locations of the Enemies that can be attacked
-    #	(Location[])
+    #   currentState - A clone of the current state (GameState)
+    #   attackingAnt - The ant currently making the attack (Ant)
+    #   enemyLocation - The Locations of the Enemies that can be attacked
+    #   (Location[])
     ##
     def getAttack(self, currentState, attackingAnt, enemyLocations):
         return enemyLocations[0]
@@ -116,80 +118,126 @@ class AIPlayer(Player):
         #method templaste, not implemented
         pass
 
+#in the current version, only evaluates proximity to winning via food collection
 def heuristicStepsToGoal(currentState):
-    #test value
-    return 999999
+    me = currentState.whoseTurn
+    myQueen = getAntList(currentState, me, (QUEEN,))[0]
+
+    #if a state has a dead queen, it should be avoided!!!
+    if (myQueen.health == 0):
+        return 99999999
+
+    stepsToGoal = stepsToFoodGoal(currentState)
+    
+    #add the enemy health to our heuristic measure in order to encourage attacks
+    stepsToGoal += getTotalEnemyHealth(currentState)
+
+    return stepsToGoal
         
-        
-        #returns a heuristic guess of how many moves it will take the agent to
-        #win the game starting from the given state
-    #divide steps to goal into steps to each type of win
+
+#helper method for heuristicStepsToGoal, evaluates distance to win by food
 def stepsToFoodGoal(currentState):
     #get the board
     # fastClone(currentState)
         
     #get numWorkers
-    workerList = getAntList(currentState, me, (WORKER,))
-    numWorkers = len(workerList)
+    global avgDistToFoodPoint
+    global bestFood
 
-
-    #foodScore
     myInv = getCurrPlayerInventory(currentState)
-    numFood = myInv.foodCount
-    foodLoc = self.myFood.coords
-    anthillLoc = myInv.getAnthill().coords
+    foodScore = myInv.foodCount
+    me = currentState.whoseTurn
+    workerAnts = getAntList(currentState, me, (WORKER,))
 
-    leastSteps = 9999999999999
-    bestAnt = None
-    #avgStepsToFoodPoint
-    for ant in workerList:
-        temp = stepsToFoodPoint(currentState, ant, bestFood)
-        if (temp < leastSteps):
-            leastSteps = temp
-            bestAnt = ant
+    #cant collect food without workers
+    if (len(workerAnts) == 0):
+        return 99999999
+
+    #in assignGlobalVars, we assigned avgDistToFoodPoint
+    #we multiply that by the number of food points we need
+    stepsToFoodGoal = 0
+    for i in range(11-foodScore):
+        stepsToFoodGoal += avgDistToFoodPoint
+    
+    #to that, we add the distance from scoring a food point of the ant that is closest to scoring one
+    minStepsToFoodPoint = 99999999
+    for worker in workerAnts:
+        temp = stepsToFoodPoint(currentState, worker)
+        if (temp < minStepsToFoodPoint):
+            minStepsToFoodPoint = temp
+
+    stepsToFoodGoal += minStepsToFoodPoint
+    return stepsToFoodGoal
+    
         
         
 ### Calculates the necessary steps to get +1 food point ###   
-
-def stepsToFoodPoint(currentState, workerAnt, bestFood):
+def stepsToFoodPoint(currentState, workerAnt):
+    global bestFood
     #Check if the ant is carrying food, then we only need steps to nearest constr
     if (workerAnt.carrying):
         dist = stepsToReach(currentState, workerAnt.coords, bestFood[1])
-        return dist
     #Otherwise, calculate the entire cycle the ant would need to complete to get +1 food point
     else:
-        dist = stepsToReach(currentState, workerAnt.coords, bestFood[0]) + stepsToReach(currentState, bestFood[0], bestFood[1])
-        return dist
+        dist = stepsToReach(currentState, workerAnt.coords, bestFood[0].coords) + stepsToReach(currentState, bestFood[0].coords, bestFood[1])
         
-    #Should never happen.
-    print("Something went wrong in stepsToFoodPoint.\n")
-    return None
+    return dist
 
+#not yet implemented
 def stepsToQueenGoal(currentState):
     pass
-    
+
+#not yet implemented   
 def stepsToAntHillGoal(currentState):
     pass
     
+#uses MoveNode objects to represent the outcome of all possible moves
+#returns the move associated with the MoveNode that has the lowest (best) utility
 def getMove(currentState):
-    moves = listAllLegalMoves(currentState)
     
-    moveNodes = []
-    
-    for move in moves:
-        nextState = getNextState(currentState, move)
-        stateUtility = heuristicStepsToGoal(nextState)
-        node = MoveNode(move, nextState)
-        node.setUtility(stateUtility)
-        moveNodes.append(node)
-        
-    bestMoveFromNodeList = bestMove(moveNodes).move
-            
-    return bestMoveFromNodeList
+    frontierNodes = []
+    expandedNodes = []
 
+    rootNode = MoveNode(None, currentState)
+    rootNode.depth = 0
+
+    frontierNodes.append(rootNode)
+
+    while ((len(frontierNodes) != 0) and (len(frontierNodes) < 100)):
+        expandMe = frontierNodes.pop(0)
+        expandedNodes.append(expandMe)
+        newFrontiers = expandNode(expandMe)
+        for node in newFrontiers:
+            insert(node, frontierNodes)
+        if (len(frontierNodes) == 1):
+            return frontierNodes[0].move
+
+    bestNode = frontierNodes.pop(0)
+
+    while (bestNode.depth != 1):
+        bestNode = bestNode.parent
+
+    return bestNode.move
+
+
+def insert(moveNode, moveNodeList):
+    
+    if (len(moveNodeList) == 0):
+        moveNodeList.append(moveNode)
+
+    else :
+        for i in range(len(moveNodeList)):
+            if (moveNode.utility < moveNodeList[i].utility):
+                moveNodeList.insert(i, moveNode)
+                return
+        moveNodeList.append(moveNode)
+
+    
+
+#returns the MoveNode with the lowest (best) utility given a list of MoveNodes
 def bestMove(moveNodes):
-    bestNodeUtility = 999999999
-    bestNode = None
+    bestNodeUtility = 99999999
+    bestNode = moveNodes[0]
     for moveNode in moveNodes:
         if (moveNode.utility < bestNodeUtility):
             bestNode = moveNode
@@ -197,8 +245,12 @@ def bestMove(moveNodes):
     
     return bestNode
 
-def assignBestFood(currentState, myTunnel, myHill):
+#assign the vars bestFood and avgDistToFoodPoint, which are used in determining stepsToFoodGoal
+def assignGlobalVars(currentState, myTunnel, myHill):
     
+    global bestFood
+    global avgDistToFoodPoint
+
     foods = getConstrList(currentState, None, (FOOD,))
     bestTunnelDist = 50
     bestHillDist = 50
@@ -220,6 +272,45 @@ def assignBestFood(currentState, myTunnel, myHill):
     else :
         bestFood = (bestTunnelFood, myTunnel)
 
+    me = currentState.whoseTurn
+    workerAnts = getAntList(currentState, me, (WORKER,))
+
+    for worker in workerAnts:
+        foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords, bestFood[1])
+        marginalFoodPointCost = foodToTunnelDist * 2
+    avgDistToFoodPoint = marginalFoodPointCost
+    
+#sums health of all enemy ants. Used to encourage attack moves
+def getTotalEnemyHealth(currentState):
+    me = currentState.whoseTurn
+    if (me == PLAYER_ONE):
+        enemy = PLAYER_TWO
+    else :
+        enemy = PLAYER_ONE
+    
+    enemyAnts = getAntList(currentState, enemy, (WORKER,QUEEN,DRONE,SOLDIER,R_SOLDIER))
+    totalEnemyHealth = 0
+    for ant in enemyAnts:
+        totalEnemyHealth += ant.health
+        
+    return totalEnemyHealth
+
+def expandNode(expandMe):
+    moves = listAllLegalMoves(expandMe.state)
+
+    moveNodes = []
+
+    for move in moves:
+        nextState = getNextState(expandMe.state, move)
+        stateUtility = heuristicStepsToGoal(nextState)
+        node = MoveNode(move, nextState)
+        node.depth = expandMe.depth + 1
+        node.parent = expandMe
+        node.setUtility(stateUtility)
+        moveNodes.append(node)
+
+    return moveNodes;
+
 class MoveNode():
     
     def __init__(self, move, state):
@@ -231,19 +322,28 @@ class MoveNode():
         
     def setUtility(self, newUtility):
         self.utility = newUtility + self.depth
-        
+
+    def __str__(self):
+        return "Move: " + str(self.move) + ", Utility: " + str(self.utility)
+    
 ##
 #TEST CODE FOLLOWS
 ##
 print("Test code is being run")
 
+#get all necessary values from gameState
 testState = GameState.getBasicState()
+me = testState.whoseTurn
+myTunnel = getConstrList(testState, me, (TUNNEL,))[0].coords
+myHill = getConstrList(testState, me, (ANTHILL,))[0].coords
         
 #getMove() test
 move = getMove(testState)
 if (move == None):
     print("Error in getMove(). Null move returned.\n")
-        
+else:
+    print("getMove() returned: " + str(move))
+#end getMove() test     
         
         
 #bestMove() test
@@ -261,9 +361,11 @@ bestNode = bestMove(moveNodes)
 
 if (bestNode == None):
     print("Error in bestMove(). Null node returned.\n")
+elif (bestNode.utility == None):
+    print("Error in bestMove(). Utility was not set.\n")
 else:
-    if (bestNode.utility == None):
-        print("Error in bestMove(). Utility was not set.\n")
+    print("bestMove() returned this MoveNode: " + str(bestNode))
+#end bestMove() test
         
 print("Test code has been run")
 
