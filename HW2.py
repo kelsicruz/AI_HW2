@@ -25,7 +25,7 @@ avgDistToFoodPoint = None
 ##
 class AIPlayer(Player):
     def __init__(self, inputPlayerId):
-        super(AIPlayer, self).__init__(inputPlayerId, "UtilityAgent_gieseman21_cruzk20")
+        super(AIPlayer, self).__init__(inputPlayerId, "AStarAgent_gieseman21_cruzk20")
         self.resetPlayerData()
         
     def resetPlayerData(self):
@@ -194,21 +194,45 @@ def stepsToAntHillGoal(currentState):
 #uses MoveNode objects to represent the outcome of all possible moves
 #returns the move associated with the MoveNode that has the lowest (best) utility
 def getMove(currentState):
-    moves = listAllLegalMoves(currentState)
+    
+    frontierNodes = []
+    expandedNodes = []
 
-    moveNodes = []
+    rootNode = MoveNode(None, currentState)
+    rootNode.depth = 0
 
-    for move in moves:
-        nextState = getNextState(currentState, move)
-        stateUtility = heuristicStepsToGoal(nextState)
-        node = MoveNode(move, nextState)
-        node.setUtility(stateUtility)
-        moveNodes.append(node)
-        
-    bestMoveNode = bestMove(moveNodes)
-    retMove = bestMoveNode.move
-            
-    return retMove
+    frontierNodes.append(rootNode)
+
+    while ((len(frontierNodes) != 0) and (len(frontierNodes) < 100)):
+        expandMe = frontierNodes.pop(0)
+        expandedNodes.append(expandMe)
+        newFrontiers = expandNode(expandMe)
+        for node in newFrontiers:
+            insert(node, frontierNodes)
+        if (len(frontierNodes) == 1):
+            return frontierNodes[0].move
+
+    bestNode = frontierNodes.pop(0)
+
+    while (bestNode.depth != 1):
+        bestNode = bestNode.parent
+
+    return bestNode.move
+
+
+def insert(moveNode, moveNodeList):
+    
+    if (len(moveNodeList) == 0):
+        moveNodeList.append(moveNode)
+
+    else :
+        for i in range(len(moveNodeList)):
+            if (moveNode.utility < moveNodeList[i].utility):
+                moveNodeList.insert(i, moveNode)
+                return
+        moveNodeList.append(moveNode)
+
+    
 
 #returns the MoveNode with the lowest (best) utility given a list of MoveNodes
 def bestMove(moveNodes):
@@ -270,6 +294,22 @@ def getTotalEnemyHealth(currentState):
         totalEnemyHealth += ant.health
         
     return totalEnemyHealth
+
+def expandNode(expandMe):
+    moves = listAllLegalMoves(expandMe.state)
+
+    moveNodes = []
+
+    for move in moves:
+        nextState = getNextState(expandMe.state, move)
+        stateUtility = heuristicStepsToGoal(nextState)
+        node = MoveNode(move, nextState)
+        node.depth = expandMe.depth + 1
+        node.parent = expandMe
+        node.setUtility(stateUtility)
+        moveNodes.append(node)
+
+    return moveNodes;
 
 class MoveNode():
     
