@@ -10,6 +10,10 @@ from GameState import *
 from AIPlayerUtils import *
 import math
 
+#######################################
+# FINAL WORKING VERSON OF HW2B 2/9/2020
+#######################################
+
 #global vars
 bestFood = None
 avgDistToFoodPoint = None
@@ -146,21 +150,15 @@ def heuristicStepsToGoal(currentState):
 
     minStepsToEnemyHill = 99999999
     for ant in fightAnts:
-        stepsToGoal += stepsToReach(currentState, ant.coords, theirQueen.coords)/3
-        stepsToGoal += stepsToReach(currentState, ant.coords, enemyAnthill)/3 
-    #     if (temp < minStepsToEnemyHill):
-    #         minStepsToEnemyHill = temp
-    
+        stepsToGoal += stepsToReach(currentState, ant.coords, enemyAnthill)/4
 
-    stepsToGoal -= len(fightAnts)*4
-    # stepsToGoal += minStepsToEnemyHill
 
+    stepsToGoal -= len(fightAnts)*8
 
     antCap = len(fightAnts) - 2
     for i in range(antCap):
         stepsToGoal = stepsToGoal * 2
 
-    #stepsToGoal += stepsToAntHillGoal(currentState)
 
     return stepsToGoal
         
@@ -215,40 +213,6 @@ def stepsToFoodPoint(currentState, workerAnt):
         dist = stepsToReach(currentState, workerAnt.coords, bestFood[0].coords) + stepsToReach(currentState, bestFood[0].coords, bestFood[1])
         
     return dist
-
-#not yet implemented
-def stepsToQueenGoal(currentState):
-    pass
-
-#not yet implemented   
-def stepsToAntHillGoal(currentState):
-    pass
-    # stepsToAnthillGoal = 0
-    # minStepsToEnemyHill = 99999999
-    # me = currentState.whoseTurn
-    # myInv = getCurrPlayerInventory(currentState)
-    # enemyInv = getEnemyInv(me, currentState)
-    # foodPoints = myInv.foodCount
-
-    # #enemyAnthill (tuple) - Coordinates of enemy's anthill
-    # enemyAnthill = enemyInv.getAnthill().coords
-    
-    # #allMyAnts (list) - List of all ants NOT including queen and worker.
-    # allMyAnts = getAntList(currentState, me, (DRONE, SOLDIER, R_SOLDIER))
-    
-    # #Add the distance between all my ants and the enemy's hill
-    # for ant in allMyAnts:
-    #     stepsToAnthillGoal += stepsToReach(currentState, ant.coords, enemyAnthill)
-
-    # for ant in allMyAnts:
-    #     temp = stepsToReach(currentState, ant.coords, enemyAnthill)
-    #     if (temp < minStepsToEnemyHill):
-    #         minStepsToEnemyHill = temp
-
-    # stepsToAnthillGoal += minStepsToEnemyHill
-    # stepsToAnthillGoal = stepsToAnthillGoal*2
-    
-    # return stepsToAnthillGoal
     
 #uses MoveNode objects to represent the outcome of all possible moves
 #returns the move associated with the MoveNode that has the lowest (best) utility
@@ -262,17 +226,19 @@ def getMove(currentState):
 
     frontierNodes.append(rootNode)
 
-    while ((len(frontierNodes) != 0) and (len(frontierNodes) < 60)):
+    while ((len(frontierNodes) < 60) and (len(frontierNodes) != 0)):
         expandMe = frontierNodes.pop(0)
         expandedNodes.append(expandMe)
         newFrontiers = expandNode(expandMe)
         for node in newFrontiers:
+            #use insert method (defined below) to maintain a sorted list
             insert(node, frontierNodes)
         if (len(frontierNodes) == 1):
             return frontierNodes[0].move
 
     bestNode = frontierNodes.pop(0)
 
+    #traverse path to the node at depth 1 and take its move
     while (bestNode.depth != 1):
         bestNode = bestNode.parent
 
@@ -280,6 +246,7 @@ def getMove(currentState):
     return bestNode.move
 
 
+#insert a move node into a sorted list (sorted by utility)
 def insert(moveNode, moveNodeList):
     
     if (len(moveNodeList) == 0):
