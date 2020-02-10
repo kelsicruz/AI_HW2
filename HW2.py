@@ -27,7 +27,7 @@ avgDistToEnemyHill = None
 ##
 class AIPlayer(Player):
     def __init__(self, inputPlayerId):
-        super(AIPlayer, self).__init__(inputPlayerId, "HW2")
+        super(AIPlayer, self).__init__(inputPlayerId, "AStarAgent_gieseman21_cruzk20")
         self.resetPlayerData()
         
     def resetPlayerData(self):
@@ -79,6 +79,7 @@ class AIPlayer(Player):
         global bestFood
         global avgDistToFoodPoint
 
+        #starts by assigning some variables to improve evaluation of proximity to scoring 11 food
         if (me == PLAYER_ONE):
             enemy = PLAYER_TWO
         else :
@@ -92,17 +93,6 @@ class AIPlayer(Player):
         
         if (bestFood == None and avgDistToFoodPoint == None):
             assignGlobalVars(currentState, self.myTunnel, self.myHill)
-        
-            
-
-        #if (self.avgDistToFoodPoint == None and self.bestFood != None):
-        #   for worker in workerAnts:
-        #       print("this loop ran once!\n")
-        #       foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords,
-        #       bestFood[1])
-
-
-        
 
         selectedMove = getMove(currentState)
             
@@ -130,13 +120,19 @@ class AIPlayer(Player):
         #method templaste, not implemented
         pass
 
+#in the current version, only evaluates proximity to winning via food collection
 def heuristicStepsToGoal(currentState):
-    #return getMove(currentState)
-    
-    
-    #test value
     me = currentState.whoseTurn
+    if (me == PLAYER_ONE):
+        enemy = PLAYER_TWO
+    else :
+        enemy = PLAYER_ONE
     myQueen = getAntList(currentState, me, (QUEEN,))[0]
+    theirQueens = getAntList(currentState, enemy, (QUEEN,))
+    if (len(theirQueens) == 0):
+        return 0
+    theirQueen = theirQueens[0]
+    fightAnts = getAntList(currentState, me, (SOLDIER, R_SOLDIER, DRONE))
 
     #if a state has a dead queen, it should be avoided!!!
     if (myQueen.health == 0):
@@ -144,18 +140,22 @@ def heuristicStepsToGoal(currentState):
 
     stepsToGoal = stepsToFoodGoal(currentState)
     
-    stepsToGoal += stepsToAntHillGoal(currentState)
+    #stepsToGoal += stepsToAntHillGoal(currentState)
     
+    #add the enemy health to our heuristic measure in order to encourage attacks
     stepsToGoal += getTotalEnemyHealth(currentState)
-    #print("total steps to goal: " + str(stepsToGoal) + "\n")
+
+    for ant in fightAnts:
+        stepsToGoal += stepsToReach(currentState, ant.coords, theirQueen.coords)/3
+
+    antCap = len(fightAnts) - 2
+    for i in range(antCap):
+        stepsToGoal = stepsToGoal * 2
+
     return stepsToGoal
         
-        
-        #returns a heuristic guess of how many moves it will take the agent to
-        #win the game starting from the given state
-    #divide steps to goal into steps to each type of win
 
-### Return steps needed to win via 11 food ###
+#helper method for heuristicStepsToGoal, evaluates distance to win by food
 def stepsToFoodGoal(currentState):
     #get the board
     # fastClone(currentState)
@@ -168,21 +168,28 @@ def stepsToFoodGoal(currentState):
     foodScore = myInv.foodCount
     me = currentState.whoseTurn
     workerAnts = getAntList(currentState, me, (WORKER,))
+    
 
-    if (len(workerAnts) == 0):
+    #cant collect food without workers
+    if (len(workerAnts) != 1):
         return 99999999
 
+    #in assignGlobalVars, we assigned avgDistToFoodPoint
+    #we multiply that by the number of food points we need
     stepsToFoodGoal = 0
     for i in range(11-foodScore):
         stepsToFoodGoal += avgDistToFoodPoint
     
+    #to that, we add the distance from scoring a food point of the ant that is closest to scoring one
     minStepsToFoodPoint = 99999999
     for worker in workerAnts:
         temp = stepsToFoodPoint(currentState, worker)
         if (temp < minStepsToFoodPoint):
             minStepsToFoodPoint = temp
 
+
     stepsToFoodGoal += minStepsToFoodPoint
+    
     return stepsToFoodGoal
     
         
@@ -193,23 +200,21 @@ def stepsToFoodPoint(currentState, workerAnt):
     #Check if the ant is carrying food, then we only need steps to nearest constr
     if (workerAnt.carrying):
         dist = stepsToReach(currentState, workerAnt.coords, bestFood[1])
-        #dist = distance(workerAnt.coords, bestFood[1])
     #Otherwise, calculate the entire cycle the ant would need to complete to get +1 food point
     else:
         dist = stepsToReach(currentState, workerAnt.coords, bestFood[0].coords) + stepsToReach(currentState, bestFood[0].coords, bestFood[1])
-        #dist = distance(workerAnt.coords, bestFood[0].coords) + distance(bestFood[0].coords, bestFood[1])
         
-   # print("Distance to next step in food goal: " + str(dist))
     return dist
     
     #Should never happen.
     print("Something went wrong in stepsToFoodPoint.\n")
     return None
 
+#not yet implemented
 def stepsToQueenGoal(currentState):
     pass
-    
 
+#not yet implemented   
 def stepsToAntHillGoal(currentState):
     # Didn't use... do I need?
     global avgDistToEnemyHill
@@ -222,8 +227,8 @@ def stepsToAntHillGoal(currentState):
     #enemyAnthill (tuple) - Coordinates of enemy's anthill
     enemyAnthill = enemyInv.getAnthill().coords
     
-    #allMyAnts (list) - List of all ants NOT including queen.
-    allMyAnts = getAntList(currentState, me, (WORKER, DRONE, SOLDIER, R_SOLDIER)
+    #allMyAnts (list) - List of all ants NOT including queen and worker.
+    allMyAnts = getAntList(currentState, me, (DRONE, SOLDIER, R_SOLDIER)
 
 
     stepsToAnthillGoal = 0
@@ -248,28 +253,51 @@ def stepsToAntHillGoal(currentState):
     
     return stepsToAntHillGoal
     
+#uses MoveNode objects to represent the outcome of all possible moves
+#returns the move associated with the MoveNode that has the lowest (best) utility
 def getMove(currentState):
-    moves = listAllLegalMoves(currentState)
-
-    moveNodes = []
     
-    #print("==============considering next move==============")
-    #print(bestFood[0].coords)
+    frontierNodes = []
+    expandedNodes = []
 
-    for move in moves:
-        nextState = getNextState(currentState, move)
-        stateUtility = heuristicStepsToGoal(nextState)
-        node = MoveNode(move, nextState)
-        node.setUtility(stateUtility)
-        moveNodes.append(node)
-        
-    #print(len(moveNodes))
-    #print(MoveNode.toString(moveNodes[0]))
-    bestMoveNode = bestMove(moveNodes)
-    retMove = bestMoveNode.move
-            
-    return retMove
+    rootNode = MoveNode(None, currentState)
+    rootNode.depth = 0
 
+    frontierNodes.append(rootNode)
+
+    while ((len(frontierNodes) != 0) and (len(frontierNodes) < 60)):
+        expandMe = frontierNodes.pop(0)
+        expandedNodes.append(expandMe)
+        newFrontiers = expandNode(expandMe)
+        for node in newFrontiers:
+            insert(node, frontierNodes)
+        if (len(frontierNodes) == 1):
+            return frontierNodes[0].move
+
+    bestNode = frontierNodes.pop(0)
+
+    while (bestNode.depth != 1):
+        bestNode = bestNode.parent
+
+
+    return bestNode.move
+
+
+def insert(moveNode, moveNodeList):
+    
+    if (len(moveNodeList) == 0):
+        moveNodeList.append(moveNode)
+
+    else :
+        for i in range(len(moveNodeList)):
+            if (moveNode.utility < moveNodeList[i].utility):
+                moveNodeList.insert(i, moveNode)
+                return
+        moveNodeList.append(moveNode)
+
+    
+
+#returns the MoveNode with the lowest (best) utility given a list of MoveNodes
 def bestMove(moveNodes):
     bestNodeUtility = 99999999
     bestNode = moveNodes[0]
@@ -280,6 +308,7 @@ def bestMove(moveNodes):
     
     return bestNode
 
+#assign the vars bestFood and avgDistToFoodPoint, which are used in determining stepsToFoodGoal
 def assignGlobalVars(currentState, myTunnel, myHill):
     
     global bestFood
@@ -320,12 +349,11 @@ def assignGlobalVars(currentState, myTunnel, myHill):
         avgDistToEnemyHill = totalDistToAnthill/len(allAnts)
 
     for worker in workerAnts:
-        #print("this loop ran once!\n")
         foodToTunnelDist = stepsToReach(currentState, bestFood[0].coords, bestFood[1])
-        #print("steps between hill and food: " + str(foodToTunnelDist))
         marginalFoodPointCost = foodToTunnelDist * 2
     avgDistToFoodPoint = marginalFoodPointCost
     
+#sums health of all enemy ants. Used to encourage attack moves
 def getTotalEnemyHealth(currentState):
     me = currentState.whoseTurn
     if (me == PLAYER_ONE):
@@ -339,6 +367,22 @@ def getTotalEnemyHealth(currentState):
         totalEnemyHealth += ant.health
         
     return totalEnemyHealth
+
+def expandNode(expandMe):
+    moves = listAllLegalMoves(expandMe.state)
+
+    moveNodes = []
+
+    for move in moves:
+        nextState = getNextState(expandMe.state, move)
+        stateUtility = heuristicStepsToGoal(nextState)
+        node = MoveNode(move, nextState)
+        node.depth = expandMe.depth + 1
+        node.parent = expandMe
+        node.setUtility(stateUtility)
+        moveNodes.append(node)
+
+    return moveNodes;
 
 class MoveNode():
     
@@ -399,69 +443,69 @@ else:
 print("Test code has been run")
 
 ### Kelsi's Unit Tests ###
-class TestHeuristicMethods(unittest.TestCase):
-    testState = GameState.getBasicState()
-    testAnt = ant(self, (0,0), 1, 2) #makes a basic worker ant located at 0,0
+# class TestHeuristicMethods(unittest.TestCase):
+#     testState = GameState.getBasicState()
+#     testAnt = ant(self, (0,0), 1, 2) #makes a basic worker ant located at 0,0
 
-    def test_stepsToAntHillGoal(testState):
-        global avgDistToFoodPoint
-        global bestFood
+#     def test_stepsToAntHillGoal(testState):
+#         global avgDistToFoodPoint
+#         global bestFood
 
-        myInv = getCurrPlayerInventory(testState)
-        workerAnts = getAntList(testState, me, (WORKER,))
-        enemyInv = getEnemyInv(self, testState)
-        enemyAnthill = enemyInv.getAnthill().coords
-        allMyAnts = getAntList(currentState, me, (WORKER, DRONE, SOLDIER, R_SOLDIER)
+#         myInv = getCurrPlayerInventory(testState)
+#         workerAnts = getAntList(testState, me, (WORKER,))
+#         enemyInv = getEnemyInv(self, testState)
+#         enemyAnthill = enemyInv.getAnthill().coords
+#         allMyAnts = getAntList(currentState, me, (WORKER, DRONE, SOLDIER, R_SOLDIER)
 
-        # CASE 1: Make sure the fxn never returns null.
-        assert stepsToAntHillGoal(testState) is not None
+#         # CASE 1: Make sure the fxn never returns null.
+#         assert stepsToAntHillGoal(testState) is not None
 
-        # CASE 2: If we have no ants and food points are >= 1, return bogus num
-        allMyAnts.clear()
-        myInv.foodCount = 1
-        assertEqual(stepsToAntHillGoal(testState), 9999999)
+#         # CASE 2: If we have no ants and food points are >= 1, return bogus num
+#         allMyAnts.clear()
+#         myInv.foodCount = 1
+#         assertEqual(stepsToAntHillGoal(testState), 9999999)
 
-        # CASE 3: Fxn returns expected val w normal inputs
-        allMyAnts.appent(testAnt)
-        testAntDist = 2*(stepsToReach(testState, testAnt.coords, enemyAnthill))
+#         # CASE 3: Fxn returns expected val w normal inputs
+#         allMyAnts.appent(testAnt)
+#         testAntDist = 2*(stepsToReach(testState, testAnt.coords, enemyAnthill))
 
-        assertEqual(stepsToAntHillGoal(testState), testAntDist)
+#         assertEqual(stepsToAntHillGoal(testState), testAntDist)
 
-    def test_stepsToFoodPoint(testState, testAnt):
-        global bestFood
-        # CASE 1: If the ant is carrying food, get distance from ant to tunnel.
-        testAnt.carrying = True
-        expectedDistance1 = stepsToReach(testState, workerAnt.coords, bestFood[1])
-        assertEqual(stepsToFoodPoint(testState, testAnt), expectedDistance1)
+#     def test_stepsToFoodPoint(testState, testAnt):
+#         global bestFood
+#         # CASE 1: If the ant is carrying food, get distance from ant to tunnel.
+#         testAnt.carrying = True
+#         expectedDistance1 = stepsToReach(testState, workerAnt.coords, bestFood[1])
+#         assertEqual(stepsToFoodPoint(testState, testAnt), expectedDistance1)
 
-        # CASE 2: If the ant is not carrying food, get distance from ant -> food -> tunnel
-        testAnt.carrying = False
-        expectedDistance2 = stepsToReach(testState, workerAnt.coords, bestFood[0].coords) + stepsToReach(testState, bestFood[0].coords, bestFood[1])
-        assertEqual(stepsToFoodPoint(testState, testAnt), expectedDistance2)
+#         # CASE 2: If the ant is not carrying food, get distance from ant -> food -> tunnel
+#         testAnt.carrying = False
+#         expectedDistance2 = stepsToReach(testState, workerAnt.coords, bestFood[0].coords) + stepsToReach(testState, bestFood[0].coords, bestFood[1])
+#         assertEqual(stepsToFoodPoint(testState, testAnt), expectedDistance2)
 
 
-    def test_stepsToFoodGoal(testState, testAnt):
-        global avgDistToFoodPoint
-        global bestFood
+#     def test_stepsToFoodGoal(testState, testAnt):
+#         global avgDistToFoodPoint
+#         global bestFood
 
-        myInv = getCurrPlayerInventory(testState)
-        workerAnts = getAntList(testState, me, (WORKER,))
+#         myInv = getCurrPlayerInventory(testState)
+#         workerAnts = getAntList(testState, me, (WORKER,))
 
-        # CASE 1: Make sure the fxn never returns null.
-        assert stepsToFoodGoal(testState) is not None
+#         # CASE 1: Make sure the fxn never returns null.
+#         assert stepsToFoodGoal(testState) is not None
 
-        # CASE 2: Fxn returns bogus num if we have no ants
-        workerAnts.clear()
-        assertEqual(stepsToFoodGoal(testState), 99999999)
+#         # CASE 2: Fxn returns bogus num if we have no ants
+#         workerAnts.clear()
+#         assertEqual(stepsToFoodGoal(testState), 99999999)
 
-        # CASE 3: Fxn returns proper num in normal case
-        workerAnts.append(testAnt)
-        myInv.foodCount = 10
-        avgDistToFoodPoint = 2
-        testAnt.carrying = True
-        expectedSteps = 2 + stepsToFoodPoint(testState, testAnt)
+#         # CASE 3: Fxn returns proper num in normal case
+#         workerAnts.append(testAnt)
+#         myInv.foodCount = 10
+#         avgDistToFoodPoint = 2
+#         testAnt.carrying = True
+#         expectedSteps = 2 + stepsToFoodPoint(testState, testAnt)
 
-        assertEqual(stepsToFoodGoal(testState), expectedSteps)
+#         assertEqual(stepsToFoodGoal(testState), expectedSteps)
 
 
 
